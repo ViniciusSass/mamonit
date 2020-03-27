@@ -7,6 +7,8 @@ import sys
 import argparse
 import operator
 
+# TODO: support user names with spaces
+
 
 class CampaignExecution:
     def __init__(self, camp_name=None, datetime_begin=None, thread=None, user=None, datetime_end=None,
@@ -182,9 +184,26 @@ def show_running_campaigns(log_file, sasserver6_instance):
             print("%s\t%s\t%s\t%s" % (c.camp_name, c.datetime_begin, c.user, sasserver6_instance))
 
 
+def extract_campaign_executions(log_dir_or_file, sasserver6_instance, output_file):
+    # Test if it's a file or dir
+    if args.log_dir:
+        log_file_names = get_log_file_names(log_dir_or_file)
+    else:
+        log_file_names = [log_dir_or_file]
+    campaign_executions = read_campaign_executions_from_logs(log_file_names, sasserver6_instance)
+    if output_file:
+        with open(output_file, "w") as of:
+            for c in campaign_executions:
+                of.write("%s,%s,%s,%s\n" % (c.camp_name, c.datetime_begin, c.user, sasserver6_instance))
+    else:
+        print("Campaign name\tStart datetime\tUser\tSASServer6 instance")
+        for c in campaign_executions:
+            print("%s\t%s\t%s\t%s" % (c.camp_name, c.datetime_begin, c.user, sasserver6_instance))
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("action", choices=["concurrency-analysis", "show-running-campaigns"],
+    parser.add_argument("action", choices=["show-running-campaigns", "concurrency-analysis", "extract-campaign-executions"],
                         help="action to be run")
     parser.add_argument("--log-dir", help="log directory")
     parser.add_argument("--log-file", help="log file")
@@ -196,7 +215,7 @@ if __name__ == "__main__":
             raise MamonitError("error: specify the SASServer6 instance name.")
         if args.action == "concurrency-analysis":
             if args.log_dir is None and args.log_file is None:
-                    raise MamonitError("error: specify either a log file or a log directory.")
+                raise MamonitError("error: specify either a log file or a log directory.")
             elif args.log_file:
                 concurrency_analysis(args.log_file, args.instance_name, args.output_file)
             else:
@@ -205,6 +224,13 @@ if __name__ == "__main__":
             if args.log_file is None:
                 raise MamonitError("error: show-running-camps only supports log files.")
             show_running_campaigns(args.log_file, args.instance_name)
+        elif args.action == "extract-campaign-executions":
+            if args.log_dir is None and args.log_file is None:
+                raise MamonitError("error: specify either a log file or a log directory.")
+            elif args.log_file:
+                extract_campaign_executions(args.log_file, args.instance_name, args.output_file)
+            else:
+                extract_campaign_executions(args.log_dir, args.instance_name, args.output_file)
     except MamonitError as m:
         parser.print_usage()
         print(m)
