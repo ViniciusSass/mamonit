@@ -201,19 +201,72 @@ def extract_campaign_executions(log_dir_or_file, sasserver6_instance, output_fil
             print("%s\t%s\t%s\t%s" % (c.camp_name, c.datetime_begin, c.user, sasserver6_instance))
 
 
+def merge_concurrency_analysis(analysis_files, output_file):
+    concatenated_analaysis = merge_analysis_files(analysis_files)
+    concatenated_analaysis.sort(key=operator.itemgetter(0))
+    instances = get_instances_from_analysis_data_structure(concatenated_analaysis)
+    instances_with_count = {}
+    for i in instances:
+        instances_with_count[i] = 0
+    merged_analysis = []
+    for i in concatenated_analaysis:
+        dttm = i[0]
+        count = i[1]
+        instance = i[2]
+        instances_with_count[instance] = int(count)
+        count_sum = 0
+        for j in instances_with_count:
+            count_sum += instances_with_count[j]
+        new_line = [dttm, count_sum]
+        merged_analysis.append(new_line)
+    if output_file:
+        with open(output_file, "w", encoding="utf-8") as of:
+            for i in merged_analysis:
+                of.write("%s,%s\n" % (i[0], i[1]))
+    else:
+        print("Datetime\tCampaign count")
+        for i in merged_analysis:
+            print("%s\t%s" % (i[0], i[1]))
+
+
+def merge_analysis_files(analysis_files):
+    merged_list = []
+    for i in analysis_files:
+        with open(i, "r", encoding="utf") as file:
+            current_file = []
+            for line in file:
+                dttm = line.split(",")[0]
+                campaign_count = line.split(",")[1]
+                instance_name = line.split(",")[2][:-1]  # remove new-line character
+                new_line = [dttm, campaign_count, instance_name]
+                current_file.append(new_line)
+            merged_list += current_file
+    return merged_list
+
+
+def get_instances_from_analysis_data_structure(analysis_data_structure):
+    instances = set()
+    for line in analysis_data_structure:
+        if line[2] not in instances:
+            instances.add(line[2])
+    return instances
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("action", choices=["show-running-campaigns", "concurrency-analysis", "extract-campaign-executions"],
+    parser.add_argument("action", choices=["show-running-campaigns", "concurrency-analysis",
+                                           "extract-campaign-executions", "merge-concurrency-analysis"],
                         help="action to be run")
     parser.add_argument("--log-dir", help="log directory")
     parser.add_argument("--log-file", help="log file")
     parser.add_argument("--instance-name", help="SASServer6 instance name")
     parser.add_argument("--output-file", help="output results to file in CSV format")
+    parser.add_argument("--analysis-files", nargs="+", help="concurrency analysis files to be merged")
     args = parser.parse_args()
     try:
-        if args.instance_name is None:
-            raise MamonitError("error: specify the SASServer6 instance name.")
         if args.action == "concurrency-analysis":
+            if args.instance_name is None:
+                raise MamonitError("error: specify the SASServer6 instance name.")
             if args.log_dir is None and args.log_file is None:
                 raise MamonitError("error: specify either a log file or a log directory.")
             elif args.log_file:
@@ -221,16 +274,24 @@ if __name__ == "__main__":
             else:
                 concurrency_analysis(args.log_dir, args.instance_name, args.output_file)
         elif args.action == "show-running-campaigns":
+            if args.instance_name is None:
+                raise MamonitError("error: specify the SASServer6 instance name.")
             if args.log_file is None:
                 raise MamonitError("error: show-running-camps only supports log files.")
             show_running_campaigns(args.log_file, args.instance_name)
         elif args.action == "extract-campaign-executions":
+            if args.instance_name is None:
+                raise MamonitError("error: specify the SASServer6 instance name.")
             if args.log_dir is None and args.log_file is None:
                 raise MamonitError("error: specify either a log file or a log directory.")
             elif args.log_file:
                 extract_campaign_executions(args.log_file, args.instance_name, args.output_file)
             else:
                 extract_campaign_executions(args.log_dir, args.instance_name, args.output_file)
+        elif args.action == "merge-concurrency-analysis":
+            if args.analysis_files is None:
+                raise MamonitError("error: specify the concurrency analysis files.")
+            merge_concurrency_analysis(args.analysis_files, args.output_file)
     except MamonitError as m:
         parser.print_usage()
         print(m)
