@@ -8,6 +8,7 @@ import argparse
 import operator
 
 # TODO: support user names with spaces
+# TODO: support log dirs in show-running-campaigns
 
 
 class CampaignExecution:
@@ -194,11 +195,11 @@ def extract_campaign_executions(log_dir_or_file, sasserver6_instance, output_fil
     if output_file:
         with open(output_file, "w") as of:
             for c in campaign_executions:
-                of.write("%s,%s,%s,%s\n" % (c.camp_name, c.datetime_begin, c.user, sasserver6_instance))
+                of.write("%s,%s,%s,%s,%s\n" % (c.camp_name, c.datetime_begin, c.user, c.status, sasserver6_instance))
     else:
-        print("Campaign name\tStart datetime\tUser\tSASServer6 instance")
+        print("Campaign name\tStart datetime\tUser\tStatus\tSASServer6 instance")
         for c in campaign_executions:
-            print("%s\t%s\t%s\t%s" % (c.camp_name, c.datetime_begin, c.user, sasserver6_instance))
+            print("%s\t%s\t%s\t%s\t%s" % (c.camp_name, c.datetime_begin, c.user, c.status, sasserver6_instance))
 
 
 def merge_concurrency_analysis(analysis_files, output_file):
