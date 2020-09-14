@@ -1,5 +1,5 @@
 # mamonit
-Log analyzer for SAS Marketing Automation
+Log analyzer for SAS Marketing Automation (tested with 6.5)
 
 Use cases:
 - Show running campaigns using active log file.
