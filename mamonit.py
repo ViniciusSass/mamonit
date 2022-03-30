@@ -108,6 +108,11 @@ def parse_events_from_log(log_file_name, sasserver6_instance):
         finishing_events = []
         sasserver6_restart_datetimes = []
         for line in log_file:
+            # Prevent script from picking up MAExecuteCampaign messages that occur from the users scheduling the campaigns
+            if re.findall("Check if user has capability: MAScheduleCampaign", line):
+                for i in range(5):
+                    log_file.readline()
+                continue
             if re.findall("has capability MAExecuteCampaign", line):
                 aux1 = re.split("etc. ", line)
                 camp_name = aux1[1][:len(aux1[1]) - 1]
@@ -195,11 +200,11 @@ def extract_campaign_executions(log_dir_or_file, sasserver6_instance, output_fil
     if output_file:
         with open(output_file, "w") as of:
             for c in campaign_executions:
-                of.write("%s,%s,%s,%s,%s\n" % (c.camp_name, c.datetime_begin, c.user, c.status, sasserver6_instance))
+                of.write("%s,%s,%s,%s,%s,%s\n" % (c.camp_name, c.datetime_begin, c.datetime_end, c.user, c.status, sasserver6_instance))
     else:
-        print("Campaign name\tStart datetime\tUser\tStatus\tSASServer6 instance")
+        print("Campaign name\tStart datetime\tFinish datetime\tUser\tStatus\tSASServer6 instance")
         for c in campaign_executions:
-            print("%s\t%s\t%s\t%s\t%s" % (c.camp_name, c.datetime_begin, c.user, c.status, sasserver6_instance))
+            print("%s\t%s\t%s\t%s\t%s\t%s" % (c.camp_name, c.datetime_begin, c.datetime_end, c.user, c.status, sasserver6_instance))
 
 
 def merge_concurrency_analysis(analysis_files, output_file):
